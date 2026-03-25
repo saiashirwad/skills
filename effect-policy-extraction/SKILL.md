@@ -23,6 +23,9 @@ This makes the domain logic 100% unit-testable without mocking `Prisma` or exter
 expensive I/O when early disqualifiers are met, and treats all business outcomes symmetrically
 (avoiding the anti-pattern of using `Effect.fail` for expected domain routing).
 
+**When NOT to use this pattern:**
+Do not over-engineer simple code. Skip this refactor if the worker is a linear, 3-step pipeline with fewer than 2 branching outcomes. Only apply this when there are distinct business decisions, thresholds, or multiple disqualifying conditions.
+
 ## 2. The Architecture
 
 For every refactored workflow, you will create or update two distinct areas:
@@ -38,13 +41,14 @@ For every refactored workflow, you will create or update two distinct areas:
 
 ### Step 1: Identify the Business Outcomes (The ADT)
 
-Look at the target `Effect.gen` block. Identify every possible path that results in a side effect, a
-return value, or a logical short-circuit. Define a `Data.TaggedEnum` that represents these outcomes.
+**Incremental Extraction Heuristic:** Do not try to refactor everything at once. Start by reading the existing code and listing *all* terminal outcomes (returns, logged errors, specific side-effects). Once you have listed the outcomes, work backwards to figure out what state is required to reach them.
+
+Define a `Data.TaggedEnum` that represents these outcomes. **Adapt the naming strictly to your target domain.** (e.g., if working on Auth, you might have `LockAccount` or `RequireMFA`).
 
 ```typescript
 import { Data } from "effect";
 
-// src/modules/orders/fulfillment/my-policy.ts
+// Example for a fulfillment verifier domain:
 export type MyDomainAction = Data.TaggedEnum<{
   SkipSimulatedMode: {};
   FlagMissingData: { field: string };
@@ -112,7 +116,27 @@ export function determine_action(ctx: ExternalStateContext): MyDomainAction {
 }
 ```
 
-### Step 4: Create the Action Applier (The Imperative Matcher)
+### Step 4: Test the Pure Functions (Zero Mocks)
+
+Because the policy is 100% pure, you can test complex business thresholds instantly without mocking `Prisma` or `Effect` environments. When asked to write tests, use this pattern:
+
+```typescript
+import { describe, expect, it } from "vitest";
+
+describe("determine_action", () => {
+  it("overrides to completed when threshold is met", () => {
+    const action = determine_action({
+      initial_amount: 100,
+      ordered_amount: 50,
+      threshold_percent: 90,
+      scrape_result: { ok: true, count: 145 }, // 100 + (50 * 0.9) = 145
+    });
+    expect(action).toStrictEqual(MyDomainAction.OverrideToCompleted({ current: 145, expected: 145 }));
+  });
+});
+```
+
+### Step 5: Create the Action Applier (The Imperative Matcher)
 
 Back in the worker/orchestrator file, create a function that takes the `Action` ADT and executes the
 exact side effects required for that outcome using `$match`.
@@ -139,7 +163,7 @@ const apply_action = Effect.fn("my_worker.apply_action")(function* (
 });
 ```
 
-### Step 5: Refactor the Main Handler
+### Step 6: Refactor the Main Handler
 
 Replace the messy, interleaved logic with a clean pipeline:
 
@@ -197,3 +221,4 @@ handler: (data, payload) =>
 4. **Don't use `Effect.fail` for Domain Routing:** Use the `Action` ADT to handle expected business
    outcomes. Reserve `Effect.fail` or typed errors specifically for infrastructural failures (like
    network timeouts or `PrismaError`).
+5. **Keep `$match` Return Types Consistent:** Ensure every branch of your `Action.$match` block returns a compatible type. If one branch returns `Effect<void>` and another returns `Effect<{ flagged: boolean }>`, the TypeScript compiler will throw an error.
