@@ -8,6 +8,10 @@ A collection of agent skills installable via the [`skills`](https://github.com/v
 
 Refactor complex Effect-based orchestrators and workers into the "Functional Core, Imperative Shell" pattern using pure policy ADTs. Separates business logic from I/O, making domain logic 100% unit-testable without mocking.
 
+### [refactor-radar](./refactor-radar/SKILL.md)
+
+Scans the codebase using parallel subagents to identify files that are prime candidates for a specific refactoring pattern or skill.
+
 ## Installation
 
 ```bash
