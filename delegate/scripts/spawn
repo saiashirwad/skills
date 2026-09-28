@@ -45,8 +45,8 @@ echo "$name" >"$job/name"
 
 rift_note=
 if [ -n "$branch" ]; then
-  (cd "$cwd" && { command rift list . >/dev/null 2>&1 || command rift init >/dev/null; })
-  ws=$(cd "$cwd" && command rift create --name "$name")
+  (cd "$cwd" && { command rift list . >/dev/null 2>&1 || command rift init >/dev/null 2>&1; })
+  ws=$(cd "$cwd" && command rift create --name "$name" 2>/dev/null | tail -1)
   git -C "$ws" switch -q -c "$branch"
   printf '%s\n%s\n' "$ws" "$branch" >"$job/rift"
   cwd=$ws
