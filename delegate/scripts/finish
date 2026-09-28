@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# finish <job>
+# Removes the job's Rift (to Rift's trash) once its branch is merged, pushed or discarded.
+# Leaves git branches and the Herdr tab alone.
+set -euo pipefail
+. "$(dirname "$0")/lib.sh"
+
+dir=$(job "${1:?usage: finish <job>}")
+if [ -f "$dir/rift" ]; then
+  ws=$(sed -n 1p "$dir/rift")
+  [ -d "$ws" ] && command rift remove "$ws" >/dev/null 2>&1
+  echo "removed rift $ws"
+fi
+touch "$dir/finished"

@@ -42,6 +42,8 @@ print(d)' "$1"; }
 
 job=$(mktemp -d "${TMPDIR:-/tmp}/delegate.$name.XXXXXX")
 echo "$name" >"$job/name"
+echo "${tier:-default}" >"$job/tier"
+echo "$cwd" >"$job/source"
 
 rift_note=
 if [ -n "$branch" ]; then
@@ -61,7 +63,7 @@ fi
 
 $rift_note
 Work alone: no subagents. Do not ask questions in chat; nobody is watching.
-When finished, write your final report to $job/result.md, then create the empty file $job/DONE as your very last action.
+When finished, write your report to $job/result.md. Start it with a \`## TL;DR\` section of at most 8 lines (the answer, decisions, anything surprising); put detail and citations below. Then create the empty file $job/DONE as your very last action.
 If you cannot continue without a human (a decision, credentials, an approval), write what you need to $job/BLOCKED and stop.
 EOF
 } >"$job/brief.md"

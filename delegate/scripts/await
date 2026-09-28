@@ -1,21 +1,24 @@
 #!/usr/bin/env bash
-# await <job-dir> [timeout-minutes]
+# await <job> [timeout-minutes]
 # Waits on the OpenCode service (not the TUI) and reports from the job's files:
 # DONE means finished, BLOCKED means it needs a human, stopping without either is a stall.
+# Prints only the TL;DR; read result.md for more.
 # Exit: 0 done, 2 blocked, 3 stalled, 4 timed out.
 set -uo pipefail
+. "$(dirname "$0")/lib.sh"
 
-job=${1:?usage: await <job-dir> [timeout-minutes]}
+dir=$(job "${1:?usage: await <job> [timeout-minutes]}") || exit 64
 deadline=$(($(date +%s) + ${2:-60} * 60))
-name=$(cat "$job/name") sid=$(cat "$job/session")
+name=$(cat "$dir/name") sid=$(cat "$dir/session")
 
 report() {
-  echo "== $name: $1 ($job)"
-  [ -f "$job/result.md" ] && cat "$job/result.md"
-  [ -f "$job/BLOCKED" ] && { echo "== needs:"; cat "$job/BLOCKED"; }
+  local lines=0
+  [ -f "$dir/result.md" ] && lines=$(wc -l <"$dir/result.md" | tr -d ' ')
+  echo "== $name: $1 (result.md: $lines lines, $dir)"
+  tldr "$dir"
+  [ -f "$dir/BLOCKED" ] && { echo "== needs:"; cat "$dir/BLOCKED"; }
   return 0
 }
-running() { opencode api get /api/session/active 2>/dev/null | grep -q "\"$sid\""; }
 waiting_on_human() {
   opencode api get "/api/session/$sid/permission" 2>/dev/null | grep -q '"id"' ||
     opencode api get "/api/session/$sid/form" 2>/dev/null | grep -q '"id"'
@@ -23,10 +26,13 @@ waiting_on_human() {
 
 idle=0
 while :; do
-  [ -f "$job/DONE" ] && { report done; exit 0; }
-  [ -f "$job/BLOCKED" ] && { report blocked; exit 2; }
+  case $(status "$dir") in
+    done) report done; exit 0 ;;
+    blocked) report blocked; exit 2 ;;
+    running) idle=0 ;;
+    *) idle=$((idle + 1)) ;;
+  esac
   if waiting_on_human; then report "waiting on a permission or question in its tab"; exit 2; fi
-  if running; then idle=0; else idle=$((idle + 1)); fi
   # Idle for three checks in a row without DONE: it stopped early.
   [ $idle -ge 3 ] && { report "stalled: session went idle without writing DONE"; exit 3; }
   [ "$(date +%s)" -ge $deadline ] && { report "timed out, still running"; exit 4; }

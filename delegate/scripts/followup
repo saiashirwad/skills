@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# followup <job> <message>
+# Sends more instructions to a job's existing session (same context, same Rift)
+# and re-arms the report contract. Then run `await <job>` again.
+set -euo pipefail
+. "$(dirname "$0")/lib.sh"
+
+dir=$(job "${1:?usage: followup <job> <message>}")
+msg=${2:?usage: followup <job> <message>}
+rm -f "$dir/DONE" "$dir/BLOCKED" "$dir/finished"
+text="$msg
+
+When finished, rewrite $dir/result.md (TL;DR of at most 8 lines first), then create $dir/DONE last. If you need a human, write it to $dir/BLOCKED and stop."
+body=$(python3 -c 'import json,sys; print(json.dumps({"text": sys.argv[1]}))' "$text")
+opencode api post "/api/session/$(cat "$dir/session")/prompt" --data "$body" >/dev/null
+echo "sent to $(cat "$dir/name"); now await it"

@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# land <job>
+# Copies the job's Rift branch into the repo it was spawned from, as a local
+# branch of the same name. Merges nothing; prints what the branch changes.
+set -euo pipefail
+. "$(dirname "$0")/lib.sh"
+
+dir=$(job "${1:?usage: land <job>}")
+[ -f "$dir/rift" ] || { echo "land: $(cat "$dir/name") didn't run in a Rift" >&2; exit 64; }
+ws=$(sed -n 1p "$dir/rift") branch=$(sed -n 2p "$dir/rift") src=$(cat "$dir/source")
+
+git -C "$src" fetch -q "$ws" "+$branch:$branch"
+echo "landed $branch in $src (not merged)"
+git -C "$src" diff --stat "HEAD...$branch"

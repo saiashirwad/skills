@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# jobs: every delegated job on this machine, newest first.
+set -uo pipefail
+. "$(dirname "$0")/lib.sh"
+
+printf '%-16s %-9s %-8s %-18s %s\n' NAME STATUS TIER BRANCH TL\;DR
+for dir in $(ls -dt "$jobs_root"/delegate.* 2>/dev/null); do
+  [ -f "$dir/session" ] || continue
+  branch=-
+  [ -f "$dir/rift" ] && branch=$(sed -n 2p "$dir/rift")
+  printf '%-16s %-9s %-8s %-18s %s\n' "$(cat "$dir/name")" "$(status "$dir")" \
+    "$(cat "$dir/tier" 2>/dev/null || echo default)" "$branch" "$(tldr "$dir" | head -1 | cut -c1-60)"
+done
