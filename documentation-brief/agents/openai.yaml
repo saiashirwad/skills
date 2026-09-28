@@ -1,0 +1,6 @@
+interface:
+  display_name: "Documentation Brief"
+  short_description: "Inspect a repository before writing its docs"
+  default_prompt: "Use $documentation-brief to inspect this repository and propose an annotation-ready documentation brief."
+policy:
+  allow_implicit_invocation: false

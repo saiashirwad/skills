@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# await <job-dir> [timeout-minutes]
+# Waits on the OpenCode service (not the TUI) and reports from the job's files:
+# DONE means finished, BLOCKED means it needs a human, stopping without either is a stall.
+# Exit: 0 done, 2 blocked, 3 stalled, 4 timed out.
+set -uo pipefail
+
+job=${1:?usage: await <job-dir> [timeout-minutes]}
+deadline=$(($(date +%s) + ${2:-60} * 60))
+name=$(cat "$job/name") sid=$(cat "$job/session")
+
+report() {
+  echo "== $name: $1 ($job)"
+  [ -f "$job/result.md" ] && cat "$job/result.md"
+  [ -f "$job/BLOCKED" ] && { echo "== needs:"; cat "$job/BLOCKED"; }
+  return 0
+}
+running() { opencode api get /api/session/active 2>/dev/null | grep -q "\"$sid\""; }
+waiting_on_human() {
+  opencode api get "/api/session/$sid/permission" 2>/dev/null | grep -q '"id"' ||
+    opencode api get "/api/session/$sid/form" 2>/dev/null | grep -q '"id"'
+}
+
+idle=0
+while :; do
+  [ -f "$job/DONE" ] && { report done; exit 0; }
+  [ -f "$job/BLOCKED" ] && { report blocked; exit 2; }
+  if waiting_on_human; then report "waiting on a permission or question in its tab"; exit 2; fi
+  if running; then idle=0; else idle=$((idle + 1)); fi
+  # Idle for three checks in a row without DONE: it stopped early.
+  [ $idle -ge 3 ] && { report "stalled: session went idle without writing DONE"; exit 3; }
+  [ "$(date +%s)" -ge $deadline ] && { report "timed out, still running"; exit 4; }
+  sleep 10
+done
