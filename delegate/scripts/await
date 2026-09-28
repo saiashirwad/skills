@@ -3,7 +3,7 @@
 # Waits on the OpenCode service (not the TUI) and reports from the job's files:
 # DONE means finished, BLOCKED means it needs a human, stopping without either is a stall.
 # Prints only the TL;DR; read result.md for more.
-# Exit: 0 done, 2 blocked, 3 stalled, 4 timed out.
+# Exit: 0 done, 2 blocked, 3 stalled, 4 timed out, 5 hung (running, no new tokens for 15 min).
 set -uo pipefail
 . "$(dirname "$0")/lib.sh"
 
@@ -19,17 +19,30 @@ report() {
   [ -f "$dir/BLOCKED" ] && { echo "== needs:"; cat "$dir/BLOCKED"; }
   return 0
 }
+# Total tokens the session has used; it only grows while the model is producing.
+tokens() {
+  opencode api get "/api/session/$sid" 2>/dev/null |
+    python3 -c 'import json,sys; t=json.load(sys.stdin)["data"]["tokens"]; print(t["input"]+t["output"]+t["reasoning"])' 2>/dev/null
+}
 waiting_on_human() {
   opencode api get "/api/session/$sid/permission" 2>/dev/null | grep -q '"id"' ||
     opencode api get "/api/session/$sid/form" 2>/dev/null | grep -q '"id"'
 }
 
-idle=0
+idle=0 last=$(tokens) moved=$(date +%s)
 while :; do
   case $(status "$dir") in
     done) report done; exit 0 ;;
     blocked) report blocked; exit 2 ;;
-    running) idle=0 ;;
+    running)
+      idle=0
+      now=$(tokens)
+      if [ "$now" != "$last" ]; then last=$now moved=$(date +%s); fi
+      if [ $(($(date +%s) - moved)) -ge 900 ]; then
+        report "hung: running but no new tokens for 15 minutes; interrupt it (opencode api post /api/session/$sid/interrupt --data '{}') and followup"
+        exit 5
+      fi
+      ;;
     *) idle=$((idle + 1)) ;;
   esac
   if waiting_on_human; then report "waiting on a permission or question in its tab"; exit 2; fi

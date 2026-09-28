@@ -12,7 +12,7 @@ Scripts are in `~/.agents/skills/delegate/scripts/`; they take a job name. Use t
    - `--rift <branch>` for any job that writes: it works in a Rift (an instant copy of the checkout, uncommitted work included) on that branch. Read-only jobs run in the checkout.
    - Tiers are in `../models`: `light` for small reading jobs (lookups, finding a doc or API fact), `hard` only when the default failed or clearly can't cope, the default for everything else.
 3. Run `await <name>` with Bash `run_in_background`, one per job. It prints only the TL;DR; open `result.md` only when a decision needs the detail.
-4. On exit **0** (done), check the work where it landed, not the report. **2** (blocked): show the user what it needs; never answer an approval yourself. **3** (stalled) or **4** (timed out): read its tab (`herdr agent read <name> --source visible`), then `followup` or tell the user.
+4. On exit **0** (done), check the work where it landed, not the report. **2** (blocked): show the user what it needs; never answer an approval yourself. **3** (stalled), **4** (timed out) or **5** (hung: running with no new tokens for 15 minutes; `await` prints how to interrupt it): read its tab (`herdr agent read <name> --source visible`), then `followup` or tell the user.
 5. More to do in the same context? `followup <name> "<message>"`, then `await` again.
 6. Writing jobs: `land <name>` copies the branch into the source repo, unmerged. Before the user merges anything beyond a small docs change, spawn a `--model hard` verifier that tries to disprove it, and relay only what survives. Once it's merged, pushed or discarded, run `finish <name>` (removes the Rift; the tab stays).
 
