@@ -1,19 +1,20 @@
 #!/usr/bin/env bash
-# spawn <name> <brief.md> [--hard] [--cwd DIR] [--rift BRANCH]
+# spawn <name> <brief.md> [--model TIER] [--cwd DIR] [--rift BRANCH]
 # Creates an OpenCode session through its API, sends the brief through the API
 # (never by typing into the TUI), then opens the session in a new Herdr tab to watch.
+# TIER is a line in ../models (default: its first tier).
 # --rift snapshots DIR (uncommitted changes included) and works on BRANCH there.
 # Prints the job directory for `await`.
 set -euo pipefail
 
-usage() { echo "usage: spawn <name> <brief.md> [--hard] [--cwd DIR] [--rift BRANCH]" >&2; exit 64; }
+usage() { echo "usage: spawn <name> <brief.md> [--model TIER] [--cwd DIR] [--rift BRANCH]" >&2; exit 64; }
 [ $# -ge 2 ] || usage
 name=$1 brief=$2
 shift 2
-model='{"providerID":"oai","id":"astralow"}' cwd=$PWD branch=
+tier= cwd=$PWD branch=
 while [ $# -gt 0 ]; do
   case $1 in
-    --hard) model='{"providerID":"openai","id":"gpt-6-astra","variant":"high"}' ;;
+    --model) tier=$2; shift ;;
     --cwd) cwd=$(cd "$2" && pwd); shift ;;
     --rift) branch=$2; shift ;;
     *) usage ;;
@@ -28,6 +29,12 @@ if herdr agent get "$name" >/dev/null 2>&1; then
   echo "spawn: an agent named $name already exists; pick another name" >&2
   exit 65
 fi
+
+models=$(dirname "$0")/../models
+selector=$(grep -v '^#' "$models" | awk -v t="$tier" 'NF && (t == "" || $1 == t) {print $2; exit}')
+[ -n "$selector" ] || { echo "spawn: no tier '$tier' in $models" >&2; exit 64; }
+model=$(python3 -c 'import json,sys; pm, _, v = sys.argv[1].partition("#"); p, _, m = pm.partition("/")
+print(json.dumps({"providerID": p, "id": m, **({"variant": v} if v else {})}))' "$selector")
 
 pick() { python3 -c 'import json,sys; d=json.load(sys.stdin)
 for k in sys.argv[1].split("."): d=d[k]
