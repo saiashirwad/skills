@@ -1,3 +1,4 @@
 # tier   provider/model#variant   (spawn --model <tier>; first line is the default)
 default  oai/astralow
+light    openai/gpt-6-luna#high
 hard     openai/gpt-6-astra#high

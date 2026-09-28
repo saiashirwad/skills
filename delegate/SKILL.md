@@ -8,13 +8,13 @@ Never use the Agent tool or Workflows; delegate. Claude keeps planning, judgment
 1. Write a brief to your scratchpad. It stands alone: the job, what to read, what done looks like. `spawn` appends the report contract.
 2. `~/.agents/skills/delegate/scripts/spawn <name> <brief> [--rift <branch>] [--model <tier>]` prints a job dir.
    - `--rift <branch>` for any job that writes: it works in a Rift (an instant copy of the checkout, uncommitted work included) on that branch. Read-only jobs run in the checkout.
-   - Tiers are in `~/.agents/skills/delegate/models`. Use the default unless it failed or the job clearly needs `hard`.
+   - Tiers are in `~/.agents/skills/delegate/models`: `light` for small reading jobs (lookups, finding a doc or API fact), `hard` only when the default failed or clearly can't cope, the default for everything else.
 3. Run `~/.agents/skills/delegate/scripts/await <job> [minutes]` with Bash `run_in_background`. Fan out by spawning several.
 4. On exit **0** (done), check the work where it landed, not the report. **2** (blocked): show the user what it needs; never answer an approval yourself. **3** (stalled) or **4** (timed out): read its tab (`herdr agent read <name> --source visible`), then re-brief or tell the user. Leave tabs open.
 
 ## Briefs
 
-- **Lookup**: the question. Answer with `file:line` references.
+- **Lookup** (`--model light`): the question. Answer with `file:line` references or source URLs.
 - **Research**: `--rift research/<slug>`. Follow the `research` skill, commit to `docs/research/<slug>.md`, push the branch.
 - **Review**: the diff or branch. Each finding gives `file:line`, what breaks, and how. Then spawn a `--model hard` verifier that tries to disprove each finding from the code; relay only what survives.
 - **Prototype**: `--rift prototype/<slug>`. Follow the `prototype` skill, push the branch, say how to run it.
