@@ -1,3 +1,7 @@
+Source: [Matt Pocock UI prototype](https://github.com/mattpocock/skills/blob/d81f3a183412e71a5b1e84ca21bc1a35eea03a60/skills/engineering/prototype/UI.md).
+Revision: `d81f3a183412e71a5b1e84ca21bc1a35eea03a60`. License: [MIT](LICENSE.txt).
+Local adaptation: fixed-constraint variants, full-page capture handoff, and explicit production authorization.
+
 # UI Prototype
 
 Generate **several radically different UI variations** on a single route, switchable from a floating bottom bar. The user flips between variants in the browser, picks one (or steals bits from each), then throws the rest away.
@@ -45,7 +49,7 @@ This works whether the user is here to push back or not.
 
 ### 2. Generate radically different variants
 
-Draft each variant. Hold each one to:
+Keep brand constraints, product facts, content, and assets identical across variants; vary only the unresolved question in the brief. Draft each variant. Hold each one to:
 
 - The page's purpose and the data it has access to.
 - The project's component library / styling system (TailwindCSS, shadcn, MUI, plain CSS, whatever).
@@ -93,16 +97,11 @@ Put the switcher in a single shared component so both sub-shapes can reuse it. L
 
 ### 5. Hand it over
 
-Surface the URL (and the `?variant=` keys). The user will flip through whenever they get to it. The interesting feedback is usually **"I want the header from B with the sidebar from C"**, which is the actual design they want.
+Return one run command, complete-page variant URLs (with `?variant=` keys), the decision each tests, and known defects. Capture every variant at desktop and phone sizes in light and dark, including a reduced-motion alternative, using [capture.py](../design-brief/scripts/capture.py) (`--help` for usage). Inspect the captures and exercise keyboard focus and reduced-motion behavior; screenshots alone do not prove accessibility. Show the full-page previews before asking the user to choose.
 
 ### 6. Capture the answer and clean up
 
-Once a variant has won, capture the answer (which variant and why), then capture the prototype the way the [SKILL](SKILL.md) describes. Fold the winner into the real code and move the rest onto the throwaway branch, not into main:
-
-- **Sub-shape A**: fold the winner into the existing page; drop the losing variants and the switcher from main.
-- **Sub-shape B**: promote the winning variant to a real route; drop the throwaway route and the switcher from main.
-
-The full set of variants is the primary source, so it lands on the throwaway branch, not the bin, since variant components and the switcher left in the main branch rot fast and confuse the next reader.
+Record the user's verdict (which variant or combination, and why) on the ticket and preserve all variants on the pushed throwaway branch as the [SKILL](SKILL.md) describes. Selection is not implementation authorization: delegate production work only when the user explicitly asks. That work rewrites the validated direction for the real page or route and removes losing variants and the switcher.
 
 ## Anti-patterns
 

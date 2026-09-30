@@ -12,6 +12,8 @@ metadata:
 
 A toolkit for building polished, animated interfaces. Write animations you can read like a script, then tune them with live controls.
 
+Claude owns the brief and critique; route builds through `delegate` in an OpenCode Rift. Keep React/DialKit for tuning (Astro React islands are fine). A critique alone does not authorize implementation. Capture the chosen values, then remove tuning controls and sampled timeline bindings when finalizing production code.
+
 ---
 
 ## Skills

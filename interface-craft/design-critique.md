@@ -1,3 +1,7 @@
+Source: existing local Interface Craft by Josh Puckett, `interface-craft/design-critique.md` in `saiashirwad/skills`.
+Revision: local baseline `678fa37ef12e7f7b90e3b297df27531af37a6b83`; public upstream revision/license not established. No new upstream material imported.
+Local adaptation: distinguish observed evidence from hypotheses and recommendations.
+
 # Design Critique
 
 A systematic interface critique skill based on Josh Puckett's methodology from Interface Craft. Analyzes UI screenshots or component code and delivers specific, actionable feedback organized by visual design, interface design, interaction consistency, and user context.
@@ -55,7 +59,9 @@ Audit these specific dimensions:
 | **Icon consistency** | Are icons from the same family? Same weight/stroke width? Same optical size? Or is it a mix of styles? |
 
 For each issue found, use this structure:
-> **[Issue name]** — [Specific factual observation]. [Impact on user or experience]. [What it could be instead.]
+> **[Issue name]** — Observed: [Evidence with screenshot location or file:line]. Hypothesis: [Likely impact, including inferred emotion or comprehension]. Change: [Proposed fix].
+
+Keep source inference separate from rendered evidence; validate behavioral and accessibility claims in a browser rather than infer them from a screenshot.
 
 Be precise. Count things. Quote text. Name colors. Measure relative sizes. "There are four distinct background colors competing for attention" is better than "too many colors."
 
@@ -107,7 +113,7 @@ Structure the critique as:
 [1 paragraph, direct and honest]
 
 ## Visual Design
-[Each issue as: **Issue Name** — observation. Impact. Opportunity.]
+[Each issue using the Observed / Hypothesis / Change structure above]
 
 ## Interface Design
 [Each issue framed as missed opportunities]
@@ -130,14 +136,14 @@ Follow these strictly. They define the critique style.
 
 ### BE:
 - **Specific** — "There are six columns of data per row" not "there's a lot of data"
-- **Decisive** — "This is overwhelming" not "this might feel overwhelming"
+- **Decisive** — Make a clear recommendation supported by the evidence
 - **Factual first** — State what you see before judging it
 - **Impact-aware** — Always connect the observation to how it affects the user
 - **Constructive** — Every problem gets paired with an opportunity or direction
 - **Quantitative** — Count elements, name colors, measure relative sizes
 
 ### DO NOT:
-- **Hedge** — No "maybe," "perhaps," "it could be argued that"
+- **Present assumptions as facts** — Confidence in a recommendation is not evidence of a user's feelings
 - **Apologize** — No "unfortunately" or "sadly"
 - **Be vague** — No "the design feels off" without saying exactly what and why
 - **Prescribe without reasoning** — Never say "change X to Y" without explaining the why
@@ -187,13 +193,13 @@ Visual design, interface design, and interaction design are different skills sol
 ## Examples of Good Critique Language
 
 **Visual:**
-> **Muddy shadows** — The card shadows use a large blur radius with low opacity, creating a hazy, unfocused look rather than crisp depth. This makes the cards feel like they're floating in fog rather than sitting on a surface. Tighter, more directional shadows would give the layout a cleaner sense of elevation.
+> **Muddy shadows** — Observed: The card styles use a large blur radius with low opacity. Hypothesis: The rendered edges may look indistinct. Change: Compare a screenshot with tighter, more directional shadows before choosing the elevation treatment.
 
 **Interface:**
-> **No focusing mechanism** — All four content areas compete equally for attention. There's no visual entry point — no element says "start here." The user's eye bounces between the sidebar, the header stats, the chart, and the table with no clear priority. A stronger size or weight differential on the primary content area would give the layout a clear narrative.
+> **No focusing mechanism** — Observed: The screenshot gives the sidebar, header stats, chart, and table similar size and weight. Hypothesis: Readers may struggle to find the starting point. Change: Increase the primary content area's size or weight to establish a visual entry point.
 
 **User context:**
-> **Demoralizing progress display** — Showing "10 / 47 tasks complete" immediately communicates that 37 tasks remain. For a process that takes weeks and involves one of the most stressful experiences in a person's life, this is demoralizing. "Complete Phase 1 of 4" is psychologically very different — it frames the same progress as achievable milestones rather than an endless checklist.
+> **Progress display** — Observed: The screenshot says "10 / 47 tasks complete," leaving 37 tasks. Hypothesis: That count may discourage someone facing a stressful, weeks-long process. Change: Test phase-based milestones such as "Complete phase 1 of 4" with readers rather than assume the wording improves their experience.
 
 **Opportunity:**
 > We're missing a huge opportunity to reward progress. Completed steps could collapse or fade, making the remaining work feel smaller — not larger — as the user advances.

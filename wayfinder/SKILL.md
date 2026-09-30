@@ -61,7 +61,7 @@ With `R=repos/{owner}/{repo}` and `id(n)` = `gh api $R/issues/<n> --jq .id`:
 4. Record the answer as a resolution comment, close the ticket, and add one line to Decisions so far.
 5. Create and wire tickets that are now sharp, clear the fog they came from, close anything now out of scope, and fix tickets the decision invalidated.
 
-Resolve one ticket per session; research tickets may fan out. Other sessions may be editing the map at the same time.
+Resolve one ticket per session; research tickets may fan out. Before editing a map, fetch its latest body, change only the target section (preserving everything else), and read it back afterwards. Other sessions may edit concurrently; if drift is detected, retry from the new body rather than overwrite it.
 
 ## Research brief
 
