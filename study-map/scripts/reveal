@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# reveal <drill-dir>
+# Decrypts the drill's reference into a fresh temporary directory and prints its path.
+# Only after the user has submitted or ended the attempt.
+set -euo pipefail
+[ $# -eq 1 ] || { echo "usage: reveal <drill-dir>" >&2; exit 64; }
+keys=${STUDY_KEYS:-$HOME/.config/study}
+dir=$(mktemp -d "${TMPDIR:-/tmp}/reveal.XXXXXX")
+age -d -i "$keys/identity.txt" "$1/reference.tar.age" | tar -C "$dir" -xf -
+echo "$dir"

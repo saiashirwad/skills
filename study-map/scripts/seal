@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# seal <drill-dir> <reference-dir>
+# Encrypts reference-dir (written outside the study repo) to <drill-dir>/reference.tar.age,
+# so the answer can't be seen by accident. It stops peeks, not a determined owner of the key.
+set -euo pipefail
+[ $# -eq 2 ] || { echo "usage: seal <drill-dir> <reference-dir>" >&2; exit 64; }
+keys=${STUDY_KEYS:-$HOME/.config/study}
+command -v age >/dev/null || { echo "seal: install age first (brew install age)" >&2; exit 69; }
+[ -s "$keys/recipient.txt" ] || { echo "seal: no key; run: mkdir -p $keys && age-keygen -o $keys/identity.txt && age-keygen -y $keys/identity.txt > $keys/recipient.txt" >&2; exit 69; }
+ref=$(cd "$2" && pwd)
+top=$(git -C "$1" rev-parse --show-toplevel)
+case "$ref/" in "$top"/*) echo "seal: write the reference outside the study repo" >&2; exit 64 ;; esac
+out=$1/reference.tar.age
+[ ! -e "$out" ] || { echo "seal: $out exists; a sealed drill is never resealed, write a new variant" >&2; exit 73; }
+tar -C "$ref" -cf - . | age -R "$keys/recipient.txt" -o "$out"
+age -d -i "$keys/identity.txt" "$out" | tar -tf - >/dev/null
+echo "$out"

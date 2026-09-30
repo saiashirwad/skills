@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# due [owner/repo]
+# Lists closed study tickets that carry a review date, soonest first; DUE marks today or earlier.
+# The date is the last line of the form `review: YYYY-MM-DD` in the ticket's comments.
+set -euo pipefail
+repo=${1:-$(gh repo view --json nameWithOwner -q .nameWithOwner)}
+gh issue list -R "$repo" --state closed --limit 500 \
+  --search 'label:"study:drill","study:learn","study:mock"' --json number,title,comments \
+  --jq '.[] | ([.comments[].body | capture("(?m)^review: *(?<d>[0-9]{4}-[0-9]{2}-[0-9]{2})").d] | last) as $d
+        | select($d) | [$d, .number, .title] | @tsv' |
+  sort | awk -F'\t' -v t="$(date +%F)" '{ printf "%s %s  #%s  %s\n", ($1 <= t ? "DUE" : "   "), $1, $2, $3 }'

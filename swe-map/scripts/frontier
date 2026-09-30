@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# frontier <map-issue> [owner/repo]
+# Prints "<number>\t<title>" for every leaf ticket under the map that is open,
+# unassigned and has no open blockers. Descends into children that have their own
+# sub-issues (topics), so it works for flat and nested maps.
+# Uses the active blocker count: closed blockers stay linked, and search's
+# -is:blocked qualifier returns blocked issues (docs/research/github-subissues.md).
+set -euo pipefail
+[ $# -ge 1 ] || { echo "usage: frontier <map-issue> [owner/repo]" >&2; exit 64; }
+repo=${2:-$(gh repo view --json nameWithOwner -q .nameWithOwner)}
+
+walk() {
+  gh api "repos/$repo/issues/$1/sub_issues?per_page=100" --paginate \
+    --jq '.[] | [.number, .sub_issues_summary.total, .state, (.assignees|length), .issue_dependencies_summary.blocked_by, .title] | @tsv' |
+  while IFS=$'\t' read -r n kids state assigned blocked title; do
+    if [ "$kids" -gt 0 ]; then
+      [ "$state" = open ] && walk "$n"
+    elif [ "$state" = open ] && [ "$assigned" -eq 0 ] && [ "$blocked" -eq 0 ]; then
+      printf '%s\t%s\n' "$n" "$title"
+    fi
+  done
+}
+walk "$1"

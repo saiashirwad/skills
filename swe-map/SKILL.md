@@ -1,16 +1,16 @@
 ---
-name: wayfinder
-description: Plan work too big for one session as a map of decision tickets on GitHub issues, resolving one ticket per session until the way to the destination is clear.
+name: swe-map
+description: Plan software work too big for one session as a map of decision tickets on GitHub issues, resolving one ticket per session until the way to the destination is clear.
 disable-model-invocation: true
 ---
 
-A loose idea has arrived, too big for one session, and the way to its **destination** isn't visible yet. Wayfinder charts that way as a **map** on the repo's GitHub issues, then resolves its **tickets** (questions whose answer is a decision) one per session. It plans; it doesn't build. When you feel the pull to just do the work, you've reached the edge of the map, so hand off. A map's Notes may override this.
+A loose idea has arrived, too big for one session, and the way to its **destination** isn't visible yet. swe-map charts that way as a **map** on the repo's GitHub issues, then resolves its **tickets** (questions whose answer is a decision) one per session. It plans; it doesn't build. When you feel the pull to just do the work, you've reached the edge of the map, so hand off. A map's Notes may override this.
 
 In anything the user reads, refer to an issue by its linked title, never a bare number.
 
 ## The map
 
-A GitHub issue labelled `wayfinder:map`, with tickets as its sub-issues. It's an index: each decision lives only in its ticket, and open tickets aren't listed (query them).
+A GitHub issue labelled `swe:map`, with tickets as its sub-issues. It's an index: each decision lives only in its ticket, and open tickets aren't listed (query them).
 
 ```markdown
 ## Destination
@@ -31,14 +31,14 @@ A GitHub issue labelled `wayfinder:map`, with tickets as its sub-issues. It's an
 
 ## Tickets
 
-A sub-issue whose body is `## Question` plus what it needs, sized to one session and labelled `wayfinder:<type>`:
+A sub-issue whose body is `## Question` plus what it needs, sized to one session and labelled `swe:<type>`:
 
 - **research** (AFK): facts from outside the repo. Delegate it with the brief below.
 - **prototype** (HITL): a cheap artifact to react to, when the question is how something should look or behave. Delegate the build (`prototype` skill), then settle it with the user.
 - **grilling** (HITL, the default): a conversation using `grilling` and `domain-modeling`. Never answer the user's side yourself.
 - **task**: work that must happen before a decision (sign up, provision, move data). Delegate what an agent can do alone; give the user a checklist for the rest.
 
-A ticket's **frontier** is open, unblocked and unassigned. Ticket or fog? Ticket it if you can state the question sharply now, even if it's blocked; otherwise it stays in Not yet specified. Work past the destination is out of scope: close its ticket and add a line under Out of scope. It never returns to this map.
+A ticket's **frontier** is open, unblocked and unassigned; `~/.agents/skills/swe-map/scripts/frontier <map>` lists it. Ticket or fog? Ticket it if you can state the question sharply now, even if it's blocked; otherwise it stays in Not yet specified. Work past the destination is out of scope: close its ticket and add a line under Out of scope. It never returns to this map.
 
 With `R=repos/{owner}/{repo}` and `id(n)` = `gh api $R/issues/<n> --jq .id`:
 
@@ -65,4 +65,4 @@ Resolve one ticket per session; research tickets may fan out. Other sessions may
 
 ## Research brief
 
-`--rift research/<slug>`: "Resolve ticket <url> of map <url> using `gh`. Claim it, research it per the `research` skill, commit findings to `docs/research/<slug>.md` and push the branch, comment a summary linking the file, close the ticket, and add one line to the map's Decisions so far." When it's done, confirm the ticket is closed and the line exists.
+`--rift research/<slug>`: "Resolve ticket <url> of map <url> using `gh`. Claim it, research it per the `research` skill, commit findings to `docs/research/<slug>.md` and push the branch, comment a summary linking the file, close the ticket, and end your report with `- [<title>](<url>): <gist>`; don't edit the map." When it's done, confirm the ticket is closed, then add that line to Decisions so far yourself (parallel jobs editing the map body overwrite each other).
