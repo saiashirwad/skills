@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # spawn <name> <brief.md> [--model TIER] [--cwd DIR] [--rift BRANCH]
-# Creates an OpenCode session through its API, sends the brief through the API
-# (never by typing into the TUI), then opens the session in a new Herdr tab to watch.
+# Starts OpenCode through its API, or Claude Code through Herdr, in a new tab.
 # TIER is a line in ../models (default: its first tier).
 # --rift snapshots DIR (uncommitted changes included) and works on BRANCH there.
 # Prints the job directory for `await`.
@@ -44,6 +43,9 @@ job=$(mktemp -d "${TMPDIR:-/tmp}/delegate.$name.XXXXXX")
 echo "$name" >"$job/name"
 echo "${tier:-default}" >"$job/tier"
 echo "$cwd" >"$job/source"
+backend=opencode
+[ "${selector%%/*}" != claude ] || backend=claude
+echo "$backend" >"$job/backend"
 
 rift_note=
 if [ -n "$branch" ]; then
@@ -67,6 +69,42 @@ When finished, write your report to $job/result.md. Start it with a \`## TL;DR\`
 If you cannot continue without a human (a decision, credentials, an approval), write what you need to $job/BLOCKED and stop.
 EOF
 } >"$job/brief.md"
+
+if [ "$backend" = claude ]; then
+  if [ -n "$branch" ]; then
+    # Trust only the Rift this invocation created, never an arbitrary --cwd.
+    python3 - "$ws" <<'PY'
+import json, os, stat, sys, tempfile
+path = os.path.expanduser("~/.claude.json")
+try:
+    with open(path) as f:
+        config = json.load(f)
+    mode = stat.S_IMODE(os.stat(path).st_mode)
+except FileNotFoundError:
+    config, mode = {}, 0o600
+config.setdefault("projects", {}).setdefault(sys.argv[1], {})["hasTrustDialogAccepted"] = True
+fd, temporary = tempfile.mkstemp(prefix=".claude.json.", dir=os.path.dirname(path))
+try:
+    with os.fdopen(fd, "w") as f:
+        os.fchmod(f.fileno(), mode)
+        json.dump(config, f, indent=2)
+        f.write("\n")
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(temporary, path)
+finally:
+    if os.path.exists(temporary):
+        os.unlink(temporary)
+PY
+  fi
+  pane=$(herdr tab create --workspace "$HERDR_WORKSPACE_ID" --cwd "$cwd" --label "$name" --no-focus |
+    pick result.root_pane.pane_id)
+  herdr agent start "$name" --kind claude --pane "$pane" --timeout 60000 -- --model "${selector#*/}" --dangerously-skip-permissions >/dev/null
+  # Keep spawn asynchronous; await observes the agent and the report files.
+  nohup herdr agent prompt "$name" "Read $job/brief.md and carry it out." --wait >"$job/prompt.log" 2>&1 </dev/null &
+  echo "$job"
+  exit 0
+fi
 
 create=$(python3 -c 'import json,sys; print(json.dumps({"title": sys.argv[1], "model": json.loads(sys.argv[2]), "location": {"directory": sys.argv[3]}}))' "$name" "$model" "$cwd")
 sid=$(opencode api post /api/session --data "$create" | pick data.id)

@@ -11,6 +11,10 @@ rm -f "$dir/DONE" "$dir/BLOCKED" "$dir/finished"
 text="$msg
 
 When finished, rewrite $dir/result.md (TL;DR of at most 8 lines first), then create $dir/DONE last. If you need a human, write it to $dir/BLOCKED and stop."
-body=$(python3 -c 'import json,sys; print(json.dumps({"text": sys.argv[1]}))' "$text")
-opencode api post "/api/session/$(cat "$dir/session")/prompt" --data "$body" >/dev/null
+if [ "$(backend "$dir")" = claude ]; then
+  nohup herdr agent prompt "$(cat "$dir/name")" "$text" --wait >"$dir/prompt.log" 2>&1 </dev/null &
+else
+  body=$(python3 -c 'import json,sys; print(json.dumps({"text": sys.argv[1]}))' "$text")
+  opencode api post "/api/session/$(cat "$dir/session")/prompt" --data "$body" >/dev/null
+fi
 echo "sent to $(cat "$dir/name"); now await it"

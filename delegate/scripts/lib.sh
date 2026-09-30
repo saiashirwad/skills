@@ -11,11 +11,26 @@ job() {
   echo "$d"
 }
 
+# Jobs created before backend routing used OpenCode.
+backend() { cat "$1/backend" 2>/dev/null || echo opencode; }
+
+# Herdr lifecycle is the source of truth for Claude Code, not an OpenCode session.
+claude_state() {
+  herdr agent get "$(cat "$1/name")" 2>/dev/null |
+    python3 -c 'import json,sys; print(json.load(sys.stdin)["result"]["agent"]["agent_status"])' 2>/dev/null
+}
+
 # status <dir>: finished, done, blocked, running or stopped.
 status() {
   if [ -f "$1/finished" ]; then echo finished
   elif [ -f "$1/DONE" ]; then echo done
   elif [ -f "$1/BLOCKED" ]; then echo blocked
+  elif [ "$(backend "$1")" = claude ]; then
+    case $(claude_state "$1") in
+      working) echo running ;;
+      blocked) echo blocked ;;
+      *) echo stopped ;;
+    esac
   elif opencode api get /api/session/active 2>/dev/null | grep -q "\"$(cat "$1/session")\""; then echo running
   else echo stopped
   fi

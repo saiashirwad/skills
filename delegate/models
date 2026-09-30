@@ -2,3 +2,4 @@
 default  oai/astralow
 light    openai/gpt-6-luna#high
 hard     openai/gpt-6-astra#high
+design   claude/claude-sonnet-5-5

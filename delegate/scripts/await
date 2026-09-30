@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 # await <job> [timeout-minutes]
-# Waits on the OpenCode service (not the TUI) and reports from the job's files:
+# Waits on the job's backend and reports from the job's files:
 # DONE means finished, BLOCKED means it needs a human, stopping without either is a stall.
 # Prints only the TL;DR; read result.md for more.
-# Exit: 0 done, 2 blocked, 3 stalled, 4 timed out, 5 hung (running, no new tokens for 15 min).
+# Exit: 0 done, 2 blocked, 3 stalled, 4 timed out, 5 hung (no progress for 15 min).
 set -uo pipefail
 . "$(dirname "$0")/lib.sh"
 
 dir=$(job "${1:?usage: await <job> [timeout-minutes]}") || exit 64
 deadline=$(($(date +%s) + ${2:-60} * 60))
-name=$(cat "$dir/name") sid=$(cat "$dir/session")
+name=$(cat "$dir/name") engine=$(backend "$dir") sid=
+[ "$engine" = claude ] || sid=$(cat "$dir/session")
 
 report() {
   local lines=0
@@ -21,10 +22,20 @@ report() {
 }
 # Total tokens the session has used; it only grows while the model is producing.
 tokens() {
+  if [ "$engine" = claude ]; then
+    # Claude has no token API: measure unchanged Herdr lifecycle state instead.
+    herdr agent get "$name" 2>/dev/null |
+      python3 -c 'import json,sys; a=json.load(sys.stdin)["result"]["agent"]; print(a["state_change_seq"])' 2>/dev/null
+    return
+  fi
   opencode api get "/api/session/$sid" 2>/dev/null |
     python3 -c 'import json,sys; t=json.load(sys.stdin)["data"]["tokens"]; print(t["input"]+t["output"]+t["reasoning"])' 2>/dev/null
 }
 waiting_on_human() {
+  if [ "$engine" = claude ]; then
+    [ "$(claude_state "$dir")" = blocked ]
+    return
+  fi
   opencode api get "/api/session/$sid/permission" 2>/dev/null | grep -q '"id"' ||
     opencode api get "/api/session/$sid/form" 2>/dev/null | grep -q '"id"'
 }
@@ -39,7 +50,11 @@ while :; do
       now=$(tokens)
       if [ "$now" != "$last" ]; then last=$now moved=$(date +%s); fi
       if [ $(($(date +%s) - moved)) -ge 900 ]; then
-        report "hung: running but no new tokens for 15 minutes; interrupt it (opencode api post /api/session/$sid/interrupt --data '{}') and followup"
+        if [ "$engine" = claude ]; then
+          report "hung: Herdr reports working unchanged for 15 minutes; inspect its tab, interrupt it (herdr agent send-keys $name esc) and followup"
+        else
+          report "hung: running but no new tokens for 15 minutes; interrupt it (opencode api post /api/session/$sid/interrupt --data '{}') and followup"
+        fi
         exit 5
       fi
       ;;
