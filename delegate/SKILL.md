@@ -18,6 +18,12 @@ Scripts are in `~/.agents/skills/delegate/scripts/`; they take a job name. Use t
 
 `jobs` lists every job with its status, which helps after a context compaction.
 
+## If you are in Codex
+
+Keep using `spawn` to start OpenCode agents. For step 3, use `exec_command` instead of Bash `run_in_background`: immediately run `~/.agents/skills/delegate/scripts/await <job-directory>` with `yield_time_ms: 1000`, using the job directory returned by `spawn`. If the command yields a running `session_id`, retain it and poll with `write_stdin` (empty `chars`, `yield_time_ms: 1000` to `60000`) while doing independent work. Start one watcher per job and handle its exit status as in step 4.
+
+Keep the turn active until the delegated work is resolved or needs the user. A background command is not a guaranteed completion notification after a final response; do not stop at confirming the agent is running. After `followup`, start a new `await` watcher. After context compaction, recover job state with `jobs` and resume monitoring any unfinished jobs.
+
 ## Briefs
 
 - **Lookup** (`--model light`): the question. Answer with `file:line` references or source URLs.
