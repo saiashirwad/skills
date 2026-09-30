@@ -6,7 +6,7 @@ license: MIT; see LICENSE.txt
 
 # Web review
 
-Delegate a read-only audit to OpenCode with the target files/URLs, brief constraints, and [reference.md](reference.md). Do not fix files, install dependencies, or add framework libraries during the audit.
+Use the `delegate` skill with `--model design` for a read-only audit with the target files/URLs, brief constraints, and [reference.md](reference.md). Do not fix files, install dependencies, or add framework libraries during the audit.
 
 Report each finding as `file:line | rule | evidence | likely impact | proposed fix`, grouped by file and ordered by impact. Distinguish observed behavior from source inference; use browser evidence for keyboard focus, reduced motion, and other behavior source alone cannot prove. Include reproduction steps and capture paths, or mark the check untested. Never infer accessibility compliance from screenshots.
 
