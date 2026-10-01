@@ -1,33 +1,26 @@
 ---
 name: delegate
-description: Hand work to an OpenCode session in a Herdr tab instead of a Claude subagent. Use for any lookup, research, review, prototype build or chore that doesn't need the user in the loop.
+description: Delegate independent lookups, research, reviews, prototypes and chores to Pi in Herdr.
 ---
 
-Claude keeps planning, judgment, code the user asked Claude to write, and quick commands with short output (a lint or typecheck after an edit); everything else is delegated. Needs `HERDR_ENV=1`; without it, do small lookups inline and ask before anything bigger.
+Keep planning, judgment, requested code and quick checks; delegate the rest. Requires `HERDR_ENV=1`; otherwise do small lookups inline and ask before larger work.
 
-Scripts are in `~/.agents/skills/delegate/scripts/`; they take a job name. Use them rather than typing the git, Rift or API steps yourself.
+Use `~/.agents/skills/delegate/scripts/`:
 
-1. Write a brief to your scratchpad. It stands alone: the job, what to read, what done looks like. `spawn` appends the report contract (TL;DR first, then `DONE`).
-2. `spawn <name> <brief> [--rift <branch>] [--model <tier>]`
-   - `--rift <branch>` for any job that writes: it works in a Rift (an instant copy of the checkout, uncommitted work included) on that branch. Read-only jobs run in the checkout.
-   - Tiers are in `../models`: `light` for small reading jobs (lookups, finding a doc or API fact), `hard` only when the default failed or clearly can't cope, the default for everything else.
-3. Run `await <name>` with Bash `run_in_background`, one per job. It prints only the TL;DR; open `result.md` only when a decision needs the detail.
-4. On exit **0** (done), check the work where it landed, not the report. **2** (blocked): show the user what it needs; never answer an approval yourself. **3** (stalled), **4** (timed out) or **5** (hung: running with no new tokens for 15 minutes; `await` prints how to interrupt it): read its tab (`herdr agent read <name> --source visible`), then `followup` or tell the user.
-5. More to do in the same context? `followup <name> "<message>"`, then `await` again.
-6. Writing jobs: `land <name>` copies the branch into the source repo, unmerged. Before the user merges anything beyond a small docs change, spawn a `--model hard` verifier that tries to disprove it, and relay only what survives. Once it's merged, pushed or discarded, run `finish <name>` (removes the Rift; the tab stays).
+1. Write a standalone brief: task, sources, acceptance criteria.
+2. `spawn <name> <brief.md> [--rift <branch>] [--model <tier>] [--cwd <dir>]`. Any repo writes require a Rift (copies uncommitted work too). Default: GPT 6.1 Sol medium; `light`: low for lookups; `hard`: high for verification or when default cannot cope. See `models`.
+3. `await <name|job-dir> [minutes=60]`. Prints TL;DR; read `result.md` only for needed detail. In Claude Code: run each `await` with Bash `run_in_background`, one per job, and return to the user; you're woken on exit. Otherwise: poll; keep monitoring until resolved or user input is needed.
+4. Exit `0`: inspect actual work. `2`: show the user the blocker; never approve for them. `3/4/5`: stalled/timeout/possibly hung—read `herdr agent read <name> --source visible` before retrying or interrupting.
+5. Continue: `followup <job> "message"`, then await again.
+6. Writes: `land <job>` imports the committed branch, **without merging**. Before merging anything beyond small docs, spawn a `hard` adversarial verifier; relay substantiated findings. After merge/push/discard, run `finish <job>`.
 
-`jobs` lists every job with its status, which helps after a context compaction.
+Always `finish <job>` when no follow-up remains (including read-only jobs): closes Pi and its tab, removes any Rift, retains branches/reports/sessions. Never finish blocked or unresolved work.
 
-## If you are in Codex
+`jobs` recovers state after compaction; resume unfinished watchers. Agents work alone, report TL;DR (≤8 lines) then details/citations, create `DONE` last, or write `BLOCKED` for human input. Pi runs in its tab, not a detached service; idle alone is not completion.
 
-Keep using `spawn` to start OpenCode agents. For step 3, use `exec_command` instead of Bash `run_in_background`: immediately run `~/.agents/skills/delegate/scripts/await <job-directory>` with `yield_time_ms: 1000`, using the job directory returned by `spawn`. If the command yields a running `session_id`, retain it and poll with `write_stdin` (empty `chars`, `yield_time_ms: 1000` to `60000`) while doing independent work. Start one watcher per job and handle its exit status as in step 4.
-
-Keep the turn active until the delegated work is resolved or needs the user. A background command is not a guaranteed completion notification after a final response; do not stop at confirming the agent is running. After `followup`, start a new `await` watcher. After context compaction, recover job state with `jobs` and resume monitoring any unfinished jobs.
-
-## Briefs
-
-- **Lookup** (`--model light`): the question. Answer with `file:line` references or source URLs.
-- **Research**: `--rift research/<slug>`. Follow the `research` skill, commit to `docs/research/<slug>.md`, push the branch.
-- **Review**: the diff or branch. Each finding gives `file:line`, what breaks, and how; then verify as in step 6.
-- **Prototype**: `--rift prototype/<slug>`. Follow the `prototype` skill, push the branch, say how to run it.
-- **Chore** (long checks, docs, packaging): `--rift chore/<slug>`, commit.
+Brief contracts:
+- Lookup: `light`; answer with `file:line` or URLs.
+- Research: `research/<slug>` Rift; follow `research`, commit `docs/research/<slug>.md`, push.
+- Review: specify diff/branch; findings give `file:line`, what breaks and how; verify.
+- Prototype: `prototype/<slug>` Rift; follow `prototype`, push, give run instructions.
+- Chore: `chore/<slug>` Rift; commit.

@@ -1,5 +1,5 @@
-# tier   provider/model#variant   (spawn --model <tier>; first line is the default)
-default  oai/astralow
-light    openai/gpt-6-luna#high
-hard     openai/gpt-6.1-sol#high
-sol      openai/gpt-6.1-sol#high
+# tier   Pi provider/model:thinking (first line is the default)
+default  openai-codex/gpt-6.1-sol:medium
+light    openai-codex/gpt-6.1-sol:low
+hard     openai-codex/gpt-6.1-sol:high
+sol      openai-codex/gpt-6.1-sol:medium

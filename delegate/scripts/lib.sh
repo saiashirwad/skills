@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Sourced by the delegate scripts.
 jobs_root=${TMPDIR:-/tmp}
 jobs_root=${jobs_root%/}
@@ -11,13 +12,26 @@ job() {
   echo "$d"
 }
 
-# status <dir>: finished, done, blocked, running or stopped.
+# Live Herdr state; unknown on lookup failure.
+agent_state() {
+  herdr agent get "$(cat "$1/pane" 2>/dev/null || cat "$1/name")" 2>/dev/null |
+    python3 -c 'import json,sys; print(json.load(sys.stdin)["result"]["agent"]["agent_status"])' 2>/dev/null || echo unknown
+}
+
+# status <dir>: finished, done, blocked, running, stopped or unknown.
 status() {
   if [ -f "$1/finished" ]; then echo finished
-  elif [ -f "$1/DONE" ]; then echo done
+  elif [ -f "$1/DONE" ]; then echo 'done'
   elif [ -f "$1/BLOCKED" ]; then echo blocked
-  elif opencode api get /api/session/active 2>/dev/null | grep -q "\"$(cat "$1/session")\""; then echo running
-  else echo stopped
+  else
+    local state
+    state=$(agent_state "$1")
+    case "$state" in
+      working) echo running ;;
+      blocked) echo blocked ;;
+      idle|done) echo stopped ;;
+      *) echo unknown ;;
+    esac
   fi
 }
 

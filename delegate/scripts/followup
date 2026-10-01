@@ -7,10 +7,18 @@ set -euo pipefail
 
 dir=$(job "${1:?usage: followup <job> <message>}")
 msg=${2:?usage: followup <job> <message>}
-rm -f "$dir/DONE" "$dir/BLOCKED" "$dir/finished"
+state=$(status "$dir")
+case "$state" in
+  running|unknown|finished) echo "followup: job is $state; inspect it first" >&2; exit 65 ;;
+esac
+# A BLOCKED file may belong to an idle agent; a live approval dialog cannot be prompted.
+case $(agent_state "$dir") in
+  idle|done) ;;
+  *) echo 'followup: agent is not idle; read its tab first (artifacts retained)' >&2; exit 65 ;;
+esac
+rm -f "$dir/DONE" "$dir/BLOCKED" "$dir/result.md"
 text="$msg
 
 When finished, rewrite $dir/result.md (TL;DR of at most 8 lines first), then create $dir/DONE last. If you need a human, write it to $dir/BLOCKED and stop."
-body=$(python3 -c 'import json,sys; print(json.dumps({"text": sys.argv[1]}))' "$text")
-opencode api post "/api/session/$(cat "$dir/session")/prompt" --data "$body" >/dev/null
+herdr agent prompt "$(cat "$dir/pane")" "$text" >/dev/null
 echo "sent to $(cat "$dir/name"); now await it"

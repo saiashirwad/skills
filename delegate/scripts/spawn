@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # spawn <name> <brief.md> [--model TIER] [--cwd DIR] [--rift BRANCH]
-# Creates an OpenCode session through its API, sends the brief through the API
-# (never by typing into the TUI), then opens the session in a new Herdr tab to watch.
+# Starts an interactive Pi agent in a Herdr tab and submits the brief.
 # TIER is a line in ../models (default: its first tier).
 # --rift snapshots DIR (uncommitted changes included) and works on BRANCH there.
 # Prints the job directory for `await`.
@@ -11,7 +10,7 @@ usage() { echo "usage: spawn <name> <brief.md> [--model TIER] [--cwd DIR] [--rif
 [ $# -ge 2 ] || usage
 name=$1 brief=$2
 shift 2
-tier= cwd=$PWD branch=
+tier='' cwd=$PWD branch=''
 while [ $# -gt 0 ]; do
   case $1 in
     --model) tier=$2; shift ;;
@@ -33,9 +32,6 @@ fi
 models=$(dirname "$0")/../models
 selector=$(grep -v '^#' "$models" | awk -v t="$tier" 'NF && (t == "" || $1 == t) {print $2; exit}')
 [ -n "$selector" ] || { echo "spawn: no tier '$tier' in $models" >&2; exit 64; }
-model=$(python3 -c 'import json,sys; pm, _, v = sys.argv[1].partition("#"); p, _, m = pm.partition("/")
-print(json.dumps({"providerID": p, "id": m, **({"variant": v} if v else {})}))' "$selector")
-
 pick() { python3 -c 'import json,sys; d=json.load(sys.stdin)
 for k in sys.argv[1].split("."): d=d[k]
 print(d)' "$1"; }
@@ -68,16 +64,16 @@ If you cannot continue without a human (a decision, credentials, an approval), w
 EOF
 } >"$job/brief.md"
 
-create=$(python3 -c 'import json,sys; print(json.dumps({"title": sys.argv[1], "model": json.loads(sys.argv[2]), "location": {"directory": sys.argv[3]}}))' "$name" "$model" "$cwd")
-sid=$(opencode api post /api/session --data "$create" | pick data.id)
-echo "$sid" >"$job/session"
+tab=$(herdr tab create --workspace "$HERDR_WORKSPACE_ID" --cwd "$cwd" --label "$name" --no-focus)
+printf '%s' "$tab" | pick result.tab.tab_id >"$job/tab"
+pane=$(printf '%s' "$tab" | pick result.root_pane.pane_id)
+echo "$pane" >"$job/pane"
+started=$(herdr agent start "$name" --kind pi --pane "$pane" --timeout 60000 -- \
+  --model "$selector" --name "$name" --session-dir "$job/sessions")
+printf '%s' "$started" | pick result.agent.agent_session.value >"$job/session"
 
-pane=$(herdr tab create --workspace "$HERDR_WORKSPACE_ID" --cwd "$cwd" --label "$name" --no-focus |
-  pick result.root_pane.pane_id)
-herdr agent start "$name" --kind opencode --pane "$pane" --timeout 60000 -- --session "$sid" >/dev/null ||
-  echo "spawn: watcher tab failed to start; the job still runs in the OpenCode service" >&2
-
-prompt=$(python3 -c 'import json,sys; print(json.dumps({"text": sys.argv[1]}))' "Read $job/brief.md and carry it out.")
-opencode api post "/api/session/$sid/prompt" --data "$prompt" >/dev/null
+# Record the job before submission: a prompt error may still have delivered it.
+echo "job: $job" >&2
+herdr agent prompt "$pane" "Read $job/brief.md and carry it out." >/dev/null
 
 echo "$job"

@@ -1,11 +1,24 @@
 #!/usr/bin/env bash
 # finish <job>
 # Removes the job's Rift (to Rift's trash) once its branch is merged, pushed or discarded.
-# Leaves git branches and the Herdr tab alone.
+# Closes the delegated Pi tab; retains git branches, reports and session history.
 set -euo pipefail
 . "$(dirname "$0")/lib.sh"
 
 dir=$(job "${1:?usage: finish <job>}")
+if [ ! -f "$dir/tab-closed" ]; then
+  if [ -f "$dir/tab" ]; then
+    herdr tab close "$(cat "$dir/tab")" >/dev/null
+  elif [ -f "$dir/pane" ]; then
+    # Jobs spawned before tab IDs were recorded have a dedicated Pi pane.
+    herdr pane close "$(cat "$dir/pane")" >/dev/null
+  else
+    echo 'finish: no saved tab/pane; close the agent manually first' >&2
+    exit 65
+  fi
+  touch "$dir/tab-closed"
+  echo "closed Pi for $(cat "$dir/name")"
+fi
 if [ -f "$dir/rift" ]; then
   ws=$(sed -n 1p "$dir/rift")
   [ -d "$ws" ] && command rift remove "$ws" >/dev/null 2>&1
