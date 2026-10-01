@@ -7,6 +7,7 @@ jobs_root=${jobs_root%/}
 job() {
   if [ -d "$1" ]; then echo "${1%/}"; return; fi
   local d
+  # shellcheck disable=SC2012 # mktemp names; ls -t gives the order
   d=$(ls -dt "$jobs_root"/delegate."$1".* 2>/dev/null | head -1)
   [ -n "$d" ] || { echo "no job named $1" >&2; return 1; }
   echo "$d"

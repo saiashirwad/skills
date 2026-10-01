@@ -4,65 +4,73 @@ description: Plan work too big for one session as a map of decision tickets on G
 disable-model-invocation: true
 ---
 
-A loose idea has arrived, too big for one session, and the way to its **destination** isn't visible yet. Wayfinder charts that way as a **map** on the repo's GitHub issues, then resolves its **tickets** (questions whose answer is a decision) one per session. It plans; it doesn't build. When you feel the pull to just do the work, you've reached the edge of the map, so hand off. A map's Notes may override this.
+- Use wayfinder when a loose idea is too big for one session and the way to its destination is not visible yet
+- Wayfinder plans; it does not build
+  - When you feel the pull to do the work, you are at the edge of the map; hand off
+  - A map's Notes can override these rules
+- Scripts are in `~/.agents/skills/wayfinder/scripts/`; run them in the repo
+- In anything the user reads, refer to an issue by its linked title, never by bare number
+- A map is a GitHub issue labelled `wayfinder:map`; its tickets are sub-issues
+  - The map is an index: each decision lives only in its ticket
+  - Do not list open tickets on the map; `show` queries them
+- Map body:
 
-In anything the user reads, refer to an issue by its linked title, never a bare number.
+  ```markdown
+  ## Destination
+  <what done looks like: a spec, a locked decision, or a change. One or two lines.>
 
-## The map
+  ## Notes
+  <domain; skills every session should use; standing preferences>
 
-A GitHub issue labelled `wayfinder:map`, with tickets as its sub-issues. It's an index: each decision lives only in its ticket, and open tickets aren't listed (query them).
+  ## Decisions so far
+  - [<closed ticket title>](url): <one-line gist>
 
-```markdown
-## Destination
-<what done looks like: a spec, a locked decision, or a change. One or two lines.>
+  ## Not yet specified
+  <fog: in-scope questions not yet sharp enough to ticket>
 
-## Notes
-<domain; skills every session should use; standing preferences>
+  ## Out of scope
+  - [<closed ticket title>](url): <gist, and why it is out>
+  ```
 
-## Decisions so far
-- [<closed ticket title>](url): <one-line gist>
-
-## Not yet specified
-<fog: in-scope questions not yet sharp enough to ticket>
-
-## Out of scope
-- [<closed ticket title>](url): <gist, and why it's out>
-```
-
-## Tickets
-
-A sub-issue whose body is `## Question` plus what it needs, sized to one session and labelled `wayfinder:<type>`:
-
-- **research** (AFK): facts from outside the repo. Delegate it with the brief below.
-- **prototype** (HITL): a cheap artifact to react to, when the question is how something should look or behave. Delegate the build (`prototype` skill), then settle it with the user.
-- **grilling** (HITL, the default): a conversation using `grilling` and `domain-modeling`. Never answer the user's side yourself.
-- **task**: work that must happen before a decision (sign up, provision, move data). Delegate what an agent can do alone; give the user a checklist for the rest.
-
-A ticket's **frontier** is open, unblocked and unassigned. Ticket or fog? Ticket it if you can state the question sharply now, even if it's blocked; otherwise it stays in Not yet specified. Work past the destination is out of scope: close its ticket and add a line under Out of scope. It never returns to this map.
-
-With `R=repos/{owner}/{repo}` and `id(n)` = `gh api $R/issues/<n> --jq .id`:
-
-- Claim: `gh issue edit <n> --add-assignee @me`, before any work.
-- Add to map: `gh api $R/issues/<map>/sub_issues -F sub_issue_id=<id(n)>`
-- Block: `gh api $R/issues/<n>/dependencies/blocked_by -F issue_id=<id(blocker)>`
-
-## Chart a map (the user brings an idea)
-
-1. Pin the destination with `grilling` and `domain-modeling`.
-2. Grill breadth-first for the open decisions. If there's no fog, you don't need a map; ask the user how to proceed.
-3. Create the map, then the tickets you can state, then wire blocking in a second pass.
-4. Delegate every research ticket, then stop. Charting resolves nothing.
-
-## Work the map (the user brings a map)
-
-1. Read the map body, not every ticket.
-2. Take the named ticket, or the first on the frontier, and claim it.
-3. Resolve it, zooming into related tickets as needed and using the skills Notes names.
-4. Record the answer as a resolution comment, close the ticket, and add one line to Decisions so far.
-5. Create and wire tickets that are now sharp, clear the fog they came from, close anything now out of scope, and fix tickets the decision invalidated.
-
-Resolve one ticket per session; research tickets may fan out. Other sessions may be editing the map at the same time.
-
-## Research brief
-
-`--rift research/<slug>`: "Resolve ticket <url> of map <url> using `gh`. Claim it, research it per the `research` skill, commit findings to `docs/research/<slug>.md` and push the branch, comment a summary linking the file, close the ticket, and add one line to the map's Decisions so far." When it's done, confirm the ticket is closed and the line exists.
+- A ticket is a question whose answer is a decision, sized to one session
+  - Body: `## Question`, then what the question needs
+  - `research` (AFK): facts from outside the repo; delegate a Research job
+  - `prototype` (HITL): a cheap artifact to react to, when the question is how something should look or behave
+    - Delegate the build as a Prototype job; then settle it with the user
+  - `grilling` (HITL, the default): a conversation with `grilling` and `domain-modeling`
+    - Never answer the user's side yourself
+  - `task` (AFK): work that must happen before a decision (sign up, provision, move data)
+    - Delegate what an agent can do alone as a Chore job; give the user a checklist for the rest
+- A ticket is on the frontier when it is open, unblocked and unassigned
+- Ticket a question when you can state it sharply now, even if it is blocked
+  - Otherwise keep it in Not yet specified
+- Work past the destination is out of scope
+  - Resolve its ticket with `--out-of-scope`; it never returns to this map
+- Delegate AFK tickets with the `delegate` skill
+  - Research uses `--rift research/<slug>`; Pi commits `docs/research/<slug>.md` and pushes the branch
+  - Pi does not touch the ticket or the map; when the job is done, inspect the work and run `resolve`
+  - Outside Herdr: leave AFK tickets open; tell the user which ones wait for a Herdr session
+- Chart a map (the user brings an idea)
+  - Pin the destination with `grilling` and `domain-modeling`
+  - Grill breadth-first for the open decisions
+    - If there is no fog, you do not need a map; ask the user how to continue
+  - Run `map`; write Notes and fog with `gh issue edit <map> --body-file -`
+  - Run `ticket` for each question you can state; then run `block` in a second pass
+  - Delegate every research ticket, then stop; charting resolves nothing
+- Work a map (the user brings a map)
+  - Run `show <map>`; read the map body, not every ticket
+  - Take the named ticket, or the first HITL ticket on the frontier; `claim` it before any work
+  - Delegate the AFK tickets on the frontier; they can run in parallel
+  - Resolve the ticket; zoom into related tickets as needed and use the skills Notes names
+  - Run `resolve` with the answer and a one-line gist
+  - Ticket and `block` questions that are now sharp; clear the fog they came from
+  - Resolve tickets that are now out of scope; fix tickets the decision invalidated
+  - Resolve one HITL ticket per session
+  - Other sessions can edit the map at the same time
+- Scripts
+  - `map <title> <destination>` creates a map with empty sections
+  - `ticket <map> <type> <title> < body` creates and labels a ticket and adds it to the map
+  - `block <ticket> <blocker...>` marks the ticket as blocked by each blocker
+  - `show <map>` prints the map body and the open tickets, grouped as frontier, blocked and claimed
+  - `claim <ticket>` assigns the ticket to you; it fails if someone else has it
+  - `resolve <ticket> <gist> [--out-of-scope] < answer` comments the answer, closes the ticket and adds the gist line to Decisions so far or Out of scope

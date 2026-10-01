@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# show <map>: print the map body and its open tickets, frontier first.
+. "$(dirname "$0")/lib.sh"
+
+[[ $# -eq 1 ]] || die 'usage: show <map>'
+map=$(num "$1")
+
+gh api "$R/issues/$map" --jq '"# [\(.title)](\(.html_url))\n\n\(.body // "" | gsub("\\s+$"; ""))"'
+echo
+# shellcheck disable=SC2016 # jq, not shell
+gh api --paginate "$R/issues/$map/sub_issues" --jq '
+  .[] | select(.state == "open")
+  | (.labels | map(.name | select(startswith("wayfinder:")) | ltrimstr("wayfinder:")) | first // "?") as $type
+  | (if (.assignees | length) > 0 then "3\tclaimed by \(.assignees | map(.login) | join(", "))"
+     elif .issue_dependencies_summary.blocked_by > 0 then "2\tblocked"
+     else "1\tfrontier" end) as $state
+  | "\($state)\t- [\(.title)](\(.html_url)) (\($type))"' |
+  sort -s -t $'\t' -k1,2 |
+  awk -F '\t' '$2 != last { printf "%s## %s\n", (NR > 1 ? "\n" : ""), $2; last = $2 } { print $3 }'
