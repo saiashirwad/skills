@@ -3,24 +3,25 @@ name: delegate
 description: Delegate independent lookups, research, reviews, prototypes and chores to Pi in Herdr.
 ---
 
-Keep planning, judgment, requested code and quick checks; delegate the rest. Requires `HERDR_ENV=1`; otherwise do small lookups inline and ask before larger work.
-
-Use `~/.agents/skills/delegate/scripts/`:
-
-1. Write a standalone brief: task, sources, acceptance criteria.
-2. `spawn <name> <brief.md> [--rift <branch>] [--model <tier>] [--cwd <dir>]`. Any repo writes require a Rift (copies uncommitted work too). Default: GPT 6.1 Sol medium; `light`: low for lookups; `hard`: high for verification or when default cannot cope. See `models`.
-3. `await <name|job-dir> [minutes=60]`. Prints TL;DR; read `result.md` only for needed detail. In Claude Code: run each `await` with Bash `run_in_background`, one per job, and return to the user; you're woken on exit. Otherwise: poll; keep monitoring until resolved or user input is needed.
-4. Exit `0`: inspect actual work. `2`: show the user the blocker; never approve for them. `3/4/5`: stalled/timeout/possibly hung—read `herdr agent read <name> --source visible` before retrying or interrupting.
-5. Continue: `followup <job> "message"`, then await again.
-6. Writes: `land <job>` imports the committed branch, **without merging**. Before merging anything beyond small docs, spawn a `hard` adversarial verifier; relay substantiated findings. After merge/push/discard, run `finish <job>`.
-
-Always `finish <job>` when no follow-up remains (including read-only jobs): closes Pi and its tab, removes any Rift, retains branches/reports/sessions. Never finish blocked or unresolved work.
-
-`jobs` recovers state after compaction; resume unfinished watchers. Agents work alone, report TL;DR (≤8 lines) then details/citations, create `DONE` last, or write `BLOCKED` for human input. Pi runs in its tab, not a detached service; idle alone is not completion.
-
-Brief contracts:
-- Lookup: `light`; answer with `file:line` or URLs.
-- Research: `research/<slug>` Rift; follow `research`, commit `docs/research/<slug>.md`, push.
-- Review: specify diff/branch; findings give `file:line`, what breaks and how; verify.
-- Prototype: `prototype/<slug>` Rift; follow `prototype`, push, give run instructions.
-- Chore: `chore/<slug>` Rift; commit.
+- Delegate lookups, research, reviews, prototypes, chores; keep planning, judgment, requested code, quick checks
+  - Outside Herdr (`HERDR_ENV` ≠ 1): do small lookups inline, ask before bigger work
+- Scripts live in `~/.agents/skills/delegate/scripts/`
+- Write a standalone brief: task, sources, acceptance criteria
+  - Lookup: `--model light`; answer with `file:line` or URLs
+  - Research: `--rift research/<slug>`; follow `research`; commit `docs/research/<slug>.md`, push
+  - Review: name the diff/branch; findings give `file:line`, what breaks and how
+  - Prototype: `--rift prototype/<slug>`; follow `prototype`; push; give run instructions
+  - Chore: `--rift chore/<slug>`; commit
+- `spawn <name> <brief.md> [--rift <branch>] [--model light|hard] [--cwd <dir>]`
+  - Any repo write needs `--rift` (isolated copy, uncommitted work included)
+  - `hard` for verification or when the default can't cope; tiers in `models`
+- `await <job> [minutes=60]` prints the TL;DR and what to do next
+  - In Claude Code: one Bash `run_in_background` per job, then return to the user; you're woken on exit
+  - Otherwise: poll until resolved or the user is needed
+  - Done: inspect the actual work; read `result.md` only for detail you need
+- `followup <job> "message"`, then await again
+- Writes: `land <job>` copies the branch into the source repo, unmerged
+  - Before merging more than small docs: spawn a `hard` adversarial verifier; relay substantiated findings
+- `finish <job>` once nothing is left, read-only jobs too: closes the tab, removes the Rift, keeps branches and reports
+  - Never on blocked or unresolved work
+- After compaction: `jobs` shows state; restart watchers for unfinished jobs

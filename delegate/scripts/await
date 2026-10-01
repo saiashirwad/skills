@@ -5,6 +5,7 @@ set -uo pipefail
 dir=$(job "${1:?usage: await <job> [timeout-minutes]}") || exit 64
 deadline=$(($(date +%s) + ${2:-60} * 60))
 name=$(cat "$dir/name")
+peek="read the tab (herdr agent read $name --source visible) before retrying or interrupting"
 report() {
   echo "== $name: $1 ($dir)"
   tldr "$dir"
@@ -17,19 +18,19 @@ while :; do
   case $(status "$dir") in
     done) report 'done'; exit 0 ;;
     finished) report finished; exit 0 ;;
-    blocked) report 'blocked; read its tab'; exit 2 ;;
+    blocked) report 'blocked; show the user, never approve for them'; exit 2 ;;
     running)
       idle=0
       now=$(activity)
       if [ "$now" != "$last" ]; then last=$now moved=$(date +%s); fi
       if [ $(($(date +%s) - moved)) -ge 900 ]; then
-        report "possibly hung: no session activity for 15 minutes; read the tab before interrupting with herdr agent send-keys $(cat "$dir/pane") esc"
+        report "possibly hung: no session activity for 15 minutes; $peek; interrupt with herdr agent send-keys $(cat "$dir/pane") esc"
         exit 5
       fi ;;
     stopped) idle=$((idle + 1)) ;;
     *) idle=0 ;; # Detection failure is not proof the agent stopped.
   esac
-  [ "$idle" -lt 3 ] || { report 'stalled: idle without DONE'; exit 3; }
-  [ "$(date +%s)" -lt "$deadline" ] || { report timed-out; exit 4; }
+  [ "$idle" -lt 3 ] || { report "stalled: idle without DONE; $peek"; exit 3; }
+  [ "$(date +%s)" -lt "$deadline" ] || { report "timed out; $peek"; exit 4; }
   sleep 10
 done
