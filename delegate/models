@@ -1,5 +1,0 @@
-# tier   Pi provider/model:thinking (first line is the default)
-default  openai-codex/gpt-6-luna:medium
-light    openai-codex/gpt-6-luna:low
-hard     openai-codex/gpt-6-luna:high
-sol      openai-codex/gpt-6.1-sol:medium
